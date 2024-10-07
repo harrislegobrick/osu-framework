@@ -45,9 +45,9 @@ namespace osu.Framework.Timing
 
         [DllImport("libc", SetLastError = true)]
         private static extern int nanosleep(out Timespec req, out Timespec rem);
-        private static Timespec req = new();
+        private Timespec req = new Timespec();
 
-        private static void nanosleep(double milliseconds)
+        private void nanosleep(double milliseconds)
         {
             req.tv_sec = (long)(milliseconds / 1000);
             req.tv_nsec = (long)(milliseconds % 1000 * 1_000_000);
