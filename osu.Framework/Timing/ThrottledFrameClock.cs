@@ -4,7 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;
+using System.Runtime.InteropServices;
 using osu.Framework.Platform.Windows.Native;
 
 namespace osu.Framework.Timing
@@ -33,6 +33,28 @@ namespace osu.Framework.Timing
         public double TimeSlept { get; private set; }
 
         private IntPtr waitableTimer;
+
+#pragma warning disable IDE1006 // Naming rule violation
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Timespec
+        {
+            public long tv_sec;
+            public long tv_nsec;
+        }
+#pragma warning restore IDE1006 // Naming rule violation
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern int nanosleep(out Timespec req, out Timespec rem);
+        private static Timespec req = new();
+
+        private static void nanosleep(double milliseconds)
+        {
+            req.tv_sec = (long)(milliseconds / 1000);
+            req.tv_nsec = (long)(milliseconds % 1000 * 1_000_000);
+
+            // using req for both parameters because remaining time doesn't matter
+            nanosleep(out req, out req);
+        }
 
         internal ThrottledFrameClock()
         {
@@ -92,7 +114,7 @@ namespace osu.Framework.Timing
             TimeSpan timeSpan = TimeSpan.FromMilliseconds(milliseconds);
 
             if (!waitWaitableTimer(timeSpan))
-                Thread.Sleep(timeSpan);
+                nanosleep(milliseconds);
 
             return (CurrentTime = SourceTime) - before;
         }
